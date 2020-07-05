@@ -11,6 +11,7 @@ function App() {
   const [uuidLabels, setUuidLabel] = React.useState({});
   const [sceneWidth, setSceneWidth] = React.useState(600);
   const [sceneHeight, setSceneHeight] = React.useState(400);
+  const [color, setColor] = React.useState("#4754ff");
 
   const wrapper = React.useRef({});
   const uuidWrapper = React.useRef({});
@@ -34,7 +35,7 @@ function App() {
       0.01,
       100
     );
-    camera.current.position.set(5, 5, 10);
+    camera.current.position.set(10, 10, 15);
 
     renderer.current = new THREE.WebGLRenderer();
     renderer.current.setSize(
@@ -65,6 +66,7 @@ function App() {
     animate();
   }, []);
 
+  // effect on sceneWidth, sceneHeight
   React.useEffect(() => {
     document.querySelector(".scene-wrapper").innerHTML = "";
     window.addEventListener("resize", () => {
@@ -114,96 +116,56 @@ function App() {
     );
   };
 
-  const createCylinder = () => {
-    const geometry = new THREE.CylinderBufferGeometry(0.5, 0.5, 0.5, 20);
-    geometry.scale(scale, scale, scale);
-    const material = new THREE.MeshPhongMaterial({
-      color: 0x44aa88,
-      // wireframe: true,
-    });
-    const cylinder = new THREE.Mesh(geometry, material);
-    //uuid
-    const uuid = cylinder.uuid;
-    const btn = createUuidLabel(
-      uuid,
-      "Cylinder",
-      uuidLabels,
-      deleteFigureHandler
+  const createFigureHandler = (name) => {
+    const cylinderGeometry = new THREE.CylinderBufferGeometry(
+      0.5,
+      0.5,
+      0.5,
+      20
     );
-    setUuidLabel((state) => {
-      return {
-        ...state,
-        [uuid]: btn,
-      };
-    });
+    const boxGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const sphereGeometry = new THREE.SphereGeometry(0.5, 20, 20);
+    let geometry;
 
-    cylinder.position.x = Math.floor(Math.random() * 5);
-    cylinder.position.y = Math.floor(Math.random() * 5);
-    cylinder.position.z = Math.floor(Math.random() * 5);
-    scene.current.add(cylinder);
-    setFigures((state) => ({ ...state, [uuid]: cylinder }));
-  };
-
-  const createBox = () => {
-    const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    geometry.scale(scale, scale, scale);
-    const material = new THREE.MeshPhongMaterial({ color: 0x44aa88 });
-    const box = new THREE.Mesh(geometry, material);
-    const uuid = box.uuid;
-
-    const btn = createUuidLabel(uuid, "Box", uuidLabels, deleteFigureHandler);
-    setUuidLabel((state) => {
-      return {
-        ...state,
-        [uuid]: btn,
-      };
-    });
-
-    box.position.x = Math.floor(Math.random() * 5);
-    box.position.y = Math.floor(Math.random() * 5);
-    box.position.z = Math.floor(Math.random() * 5);
-    scene.current.add(box);
-    setFigures((state) => ({ ...state, [uuid]: box }));
-  };
-
-  const createSphere = () => {
-    const geometry = new THREE.SphereGeometry(0.5, 20, 20);
-    geometry.scale(scale, scale, scale);
-    const material = new THREE.MeshPhongMaterial({ color: 0x44aa88 });
-    const sphere = new THREE.Mesh(geometry, material);
-    const uuid = sphere.uuid;
-
-    const btn = createUuidLabel(
-      uuid,
-      "Sphere",
-      uuidLabels,
-      deleteFigureHandler
-    );
-    setUuidLabel((state) => {
-      return {
-        ...state,
-        [uuid]: btn,
-      };
-    });
-
-    sphere.position.x = Math.floor(Math.random() * 5);
-    sphere.position.y = Math.floor(Math.random() * 5);
-    sphere.position.z = Math.floor(Math.random() * 5);
-    scene.current.add(sphere);
-    setFigures((state) => ({ ...state, [uuid]: sphere }));
-  };
-
-  const createFigureHandler = () => {
-    switch (figure) {
+    switch (name) {
       case "cylinder":
-        createCylinder();
+        geometry = cylinderGeometry;
         break;
       case "box":
-        createBox();
+        geometry = boxGeometry;
         break;
       case "sphere":
-        createSphere();
+        geometry = sphereGeometry;
         break;
+    }
+
+    geometry.scale(scale, scale, scale);
+    const material = new THREE.MeshPhongMaterial({
+      color,
+      // wireframe: true,
+    });
+    const figure = new THREE.Mesh(geometry, material);
+    //uuid
+    const uuid = figure.uuid;
+    const btn = createUuidLabel(uuid, name, uuidLabels, deleteFigureHandler);
+    setUuidLabel((state) => {
+      return {
+        ...state,
+        [uuid]: btn,
+      };
+    });
+
+    figure.position.x = Math.floor(Math.random() * 10);
+    figure.position.y = Math.floor(Math.random() * 10);
+    figure.position.z = Math.floor(Math.random() * 10);
+    scene.current.add(figure);
+    setFigures((state) => ({ ...state, [uuid]: figure }));
+  };
+
+  const colorPickerHandler = (e) => {
+    const color = e.target.value;
+    if (color) {
+      setColor(() => color);
     }
   };
 
@@ -217,6 +179,14 @@ function App() {
           <option value="sphere">Sphere</option>
         </select>
         <br />
+        <label htmlFor="favcolor">Select color: </label>
+        <input
+          id="favcolor"
+          type="color"
+          defaultValue={color}
+          onChange={colorPickerHandler}
+        />
+        <br />
         <label htmlFor="">Scale </label>
         <input
           id="scale"
@@ -227,7 +197,7 @@ function App() {
           onChange={onChangeScale}
         />
         <br />
-        <button onClick={() => createFigureHandler(scene)}>Create</button>
+        <button onClick={() => createFigureHandler(figure)}>Create</button>
       </div>
       <div className="scene-wrapper" ref={wrapper} />
       <div className="uuid-wrapper" ref={uuidWrapper}>
