@@ -2,49 +2,82 @@ import React from "react";
 import * as THREE from "three";
 import "./App.scss";
 import { OrbitControls } from "./vendors/orbitsControl";
-
-let scene, light, camera, renderer, wrapper, uuidWrapper, orbitsControl;
+import UuidLabel from "./components/UuidLabel";
 
 function App() {
   const [figure, setFigure] = React.useState("cylinder");
+  const [figures, setFigures] = React.useState({});
   const [scale, setScale] = React.useState(1);
-  const [figures, setFigures] = React.useState([]);
+  const [uuidLabels, setUuidLabel] = React.useState({});
+  const [sceneWidth, setSceneWidth] = React.useState(600);
+  const [sceneHeight, setSceneHeight] = React.useState(400);
+
+  const wrapper = React.useRef({});
+  const uuidWrapper = React.useRef({});
+  const scene = React.useRef({});
+  const light = React.useRef({});
+  const camera = React.useRef({});
+  const renderer = React.useRef({});
+  const orbitsControl = React.useRef({});
 
   const init = () => {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x333333);
+    scene.current = new THREE.Scene();
+    scene.current.background = new THREE.Color(0x333333);
 
-    light = new THREE.DirectionalLight(0xffffff);
-    light.position.set(-1, 2, 2);
-    scene.add(light);
+    light.current = new THREE.DirectionalLight(0xffffff);
+    light.current.position.set(-1, 2, 2);
+    scene.current.add(light.current);
 
-    camera = new THREE.PerspectiveCamera(
+    camera.current = new THREE.PerspectiveCamera(
       75,
-      wrapper.clientWidth / wrapper.clientHeight,
+      wrapper.current.clientWidth / wrapper.current.clientHeight,
       0.01,
       100
     );
-    camera.position.set(5, 5, 10);
+    camera.current.position.set(5, 5, 10);
 
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
-    wrapper.appendChild(renderer.domElement);
+    renderer.current = new THREE.WebGLRenderer();
+    renderer.current.setSize(
+      wrapper.current.clientWidth,
+      wrapper.current.clientHeight
+    );
+    wrapper.current.appendChild(renderer.current.domElement);
 
-    orbitsControl = new OrbitControls(camera, renderer.domElement);
+    orbitsControl.current = new OrbitControls(
+      camera.current,
+      renderer.current.domElement
+    );
   };
 
   const animate = () => {
-    renderer.render(scene, camera);
+    renderer.current.render(scene.current, camera.current);
     requestAnimationFrame(animate);
-    orbitsControl.update();
+    orbitsControl.current.update();
   };
 
   React.useEffect(() => {
-    wrapper = document.querySelector(".scene-wrapper");
-    uuidWrapper = document.querySelector(".uuid-wrapper");
+    window.addEventListener("resize", () => {
+      console.log(window.innerWidth, window.innerHeight);
+      setSceneWidth((state) => window.innerWidth);
+      setSceneHeight((state) => window.innerHeight);
+    });
     init();
     animate();
   }, []);
+
+  React.useEffect(() => {
+    document.querySelector(".scene-wrapper").innerHTML = "";
+    window.addEventListener("resize", () => {
+      // console.log(window.innerWidth, window.innerHeight);
+      setSceneWidth((state) => window.innerWidth);
+      setSceneHeight((state) => window.innerHeight);
+    });
+    init();
+    animate();
+    Object.values(figures).forEach((fig) => {
+      scene.current.add(fig);
+    });
+  }, [sceneWidth, sceneHeight]);
 
   const onChangeFiguresSelector = (e) => {
     const value = e.target.value;
@@ -56,13 +89,29 @@ function App() {
     setScale(() => value);
   };
 
-  const deleteFigureHandler = (e) => {
-    console.log(e.target.dataset.uuid);
-    const object = scene.getObjectByProperty("uuid", e.target.dataset.uuid);
+  const deleteFigureHandler = (uuid) => {
+    const object = scene.current.getObjectByProperty("uuid", uuid);
     object.geometry.dispose();
     object.material.dispose();
-    scene.remove(object);
-    e.target.parentNode.removeChild(e.target);
+    scene.current.remove(object);
+
+    setUuidLabel((state) => {
+      const newState = { ...state };
+      delete newState[uuid];
+      return { ...newState };
+    });
+  };
+
+  const createUuidLabel = (uuid, name, uuidLabels, deleteFigureHandler) => {
+    return (
+      <UuidLabel
+        key={uuid}
+        uuid={uuid}
+        name={name}
+        uuidLabels={uuidLabels}
+        deleteFigureHandler={deleteFigureHandler}
+      />
+    );
   };
 
   const createCylinder = () => {
@@ -75,17 +124,24 @@ function App() {
     const cylinder = new THREE.Mesh(geometry, material);
     //uuid
     const uuid = cylinder.uuid;
-    setFigures((state) => [...state, uuid]);
-    const btn = document.createElement("BUTTON");
-    btn.innerHTML = `${uuid}`;
-    btn.setAttribute("data-uuid", uuid);
-    btn.addEventListener("click", deleteFigureHandler);
-    uuidWrapper.appendChild(btn);
+    const btn = createUuidLabel(
+      uuid,
+      "Cylinder",
+      uuidLabels,
+      deleteFigureHandler
+    );
+    setUuidLabel((state) => {
+      return {
+        ...state,
+        [uuid]: btn,
+      };
+    });
 
     cylinder.position.x = Math.floor(Math.random() * 5);
     cylinder.position.y = Math.floor(Math.random() * 5);
     cylinder.position.z = Math.floor(Math.random() * 5);
-    scene.add(cylinder);
+    scene.current.add(cylinder);
+    setFigures((state) => ({ ...state, [uuid]: cylinder }));
   };
 
   const createBox = () => {
@@ -94,18 +150,20 @@ function App() {
     const material = new THREE.MeshPhongMaterial({ color: 0x44aa88 });
     const box = new THREE.Mesh(geometry, material);
     const uuid = box.uuid;
-    setFigures((state) => [...state, uuid]);
 
-    const btn = document.createElement("BUTTON");
-    btn.innerHTML = `${uuid}`;
-    btn.setAttribute("data-uuid", uuid);
-    btn.addEventListener("click", deleteFigureHandler);
-    uuidWrapper.appendChild(btn);
+    const btn = createUuidLabel(uuid, "Box", uuidLabels, deleteFigureHandler);
+    setUuidLabel((state) => {
+      return {
+        ...state,
+        [uuid]: btn,
+      };
+    });
 
     box.position.x = Math.floor(Math.random() * 5);
     box.position.y = Math.floor(Math.random() * 5);
     box.position.z = Math.floor(Math.random() * 5);
-    scene.add(box);
+    scene.current.add(box);
+    setFigures((state) => ({ ...state, [uuid]: box }));
   };
 
   const createSphere = () => {
@@ -114,22 +172,28 @@ function App() {
     const material = new THREE.MeshPhongMaterial({ color: 0x44aa88 });
     const sphere = new THREE.Mesh(geometry, material);
     const uuid = sphere.uuid;
-    setFigures((state) => [...state, uuid]);
 
-    const btn = document.createElement("BUTTON");
-    btn.innerHTML = `${uuid}`;
-    btn.setAttribute("data-uuid", uuid);
-    btn.addEventListener("click", deleteFigureHandler);
-    uuidWrapper.appendChild(btn);
+    const btn = createUuidLabel(
+      uuid,
+      "Sphere",
+      uuidLabels,
+      deleteFigureHandler
+    );
+    setUuidLabel((state) => {
+      return {
+        ...state,
+        [uuid]: btn,
+      };
+    });
 
     sphere.position.x = Math.floor(Math.random() * 5);
     sphere.position.y = Math.floor(Math.random() * 5);
     sphere.position.z = Math.floor(Math.random() * 5);
-    scene.add(sphere);
+    scene.current.add(sphere);
+    setFigures((state) => ({ ...state, [uuid]: sphere }));
   };
 
-  const createFigureHandler = (scene) => {
-    console.log(figures);
+  const createFigureHandler = () => {
     switch (figure) {
       case "cylinder":
         createCylinder();
@@ -165,8 +229,10 @@ function App() {
         <br />
         <button onClick={() => createFigureHandler(scene)}>Create</button>
       </div>
-      <div className="scene-wrapper" />
-      <div className="uuid-wrapper" />
+      <div className="scene-wrapper" ref={wrapper} />
+      <div className="uuid-wrapper" ref={uuidWrapper}>
+        {Object.values(uuidLabels)}
+      </div>
     </div>
   );
 }
